@@ -30,8 +30,9 @@ const sections = [
   {
     title: "Fees & Location",
     points: [
-      "Registration fee and venue details are announced before kickoff.",
-      "Contact the organizer for payment confirmation and exact location.",
+      "Venue: SoFive — 2015 Pitkin Ave, Brooklyn, NY 11207",
+      "Date: May 30, 2026 at 10:00 PM",
+      "Contact the organizer for payment details.",
       "Phone: 929-304-3899 / Instagram: @all_star_champions",
     ],
   },

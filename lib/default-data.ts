@@ -61,7 +61,7 @@ export const DEFAULT_STATE: TournamentState = {
     registrationOpen: true,
     groupsVisible: false,
     bracketVisible: false,
-    nextTournamentDate: "2026-08-15T18:00:00.000Z",
+    nextTournamentDate: "2026-05-31T02:00:00.000Z",
   },
 };
 

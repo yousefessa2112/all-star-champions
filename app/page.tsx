@@ -67,6 +67,15 @@ export default function HomePage() {
         </motion.div>
       </section>
 
+      <section className="mt-10 card flex items-center gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FFD700]/10 text-[#FFD700] text-xl">📍</div>
+        <div>
+          <p className="text-lg font-bold text-white">SoFive</p>
+          <p className="text-white/70">2015 Pitkin Ave, Brooklyn, NY 11207</p>
+          <p className="text-sm text-white/50">May 30, 2026 · 10:00 PM</p>
+        </div>
+      </section>
+
       <section className="mt-10 grid gap-4 sm:grid-cols-3">
         <div className="card">
           <p className="text-sm text-white/70">Total Slots</p>
