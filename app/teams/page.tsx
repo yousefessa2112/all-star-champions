@@ -10,10 +10,11 @@ export default function TeamsPage() {
 
   const teams = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const approved = state.teams.filter((team) => team.status === "approved");
     if (!q) {
-      return state.teams;
+      return approved;
     }
-    return state.teams.filter(
+    return approved.filter(
       (team) =>
         team.name.toLowerCase().includes(q) ||
         team.captainName.toLowerCase().includes(q),

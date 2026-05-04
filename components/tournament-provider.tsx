@@ -1,183 +1,171 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { DEFAULT_STATE, STORAGE_KEY } from "@/lib/default-data";
-import {
-  buildGroupMatches,
-  computeStandings,
-  drawGroupsRandomly,
-  seedBracketFromStandings,
-} from "@/lib/tournament-utils";
-import { BracketMatch, GroupMatch, GroupName, Team, TournamentState } from "@/lib/types";
+import { DEFAULT_STATE } from "@/lib/default-data";
+import { GroupName, Team, TournamentState } from "@/lib/types";
 
-type NewTeamInput = Omit<Team, "id" | "createdAt">;
+type NewTeamInput = Omit<Team, "id" | "createdAt" | "status">;
 
 type TournamentContextValue = {
   state: TournamentState;
   spotsRemaining: number;
-  registerTeam: (payload: NewTeamInput) => { ok: boolean; message?: string };
-  submitContactMessage: (name: string, message: string) => void;
-  setRegistrationOpen: (open: boolean) => void;
-  setGroupsVisible: (visible: boolean) => void;
-  setBracketVisible: (visible: boolean) => void;
-  setNextTournamentDate: (date: string) => void;
-  drawGroups: () => { ok: boolean; message?: string };
-  assignTeamToGroup: (teamId: string, group: GroupName) => void;
-  updateGroupMatchScore: (matchId: string, homeScore: number, awayScore: number) => void;
-  updateBracketMatchScore: (matchId: string, homeScore: number, awayScore: number) => void;
+  registerTeam: (payload: NewTeamInput) => Promise<{ ok: boolean; message?: string }>;
+  submitContactMessage: (name: string, message: string) => Promise<void>;
+  setRegistrationOpen: (open: boolean) => Promise<void>;
+  setGroupsVisible: (visible: boolean) => Promise<void>;
+  setBracketVisible: (visible: boolean) => Promise<void>;
+  setNextTournamentDate: (date: string) => Promise<void>;
+  drawGroups: () => Promise<{ ok: boolean; message?: string }>;
+  assignTeamToGroup: (teamId: string, group: GroupName) => Promise<void>;
+  updateGroupMatchScore: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
+  updateBracketMatchScore: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
+  setTeamStatus: (teamId: string, status: "pending" | "approved" | "denied") => Promise<void>;
+  editTeam: (teamId: string, payload: NewTeamInput) => Promise<{ ok: boolean; message?: string }>;
 };
 
 const TournamentContext = createContext<TournamentContextValue | null>(null);
 
-const ensureUniqueAcrossGroups = (
-  groups: Record<GroupName, string[]>,
-  teamId: string,
-  targetGroup: GroupName,
-) => {
-  const next: Record<GroupName, string[]> = {
-    A: groups.A.filter((id) => id !== teamId),
-    B: groups.B.filter((id) => id !== teamId),
-    C: groups.C.filter((id) => id !== teamId),
-    D: groups.D.filter((id) => id !== teamId),
-  };
-  if (next[targetGroup].length < 4) {
-    next[targetGroup].push(teamId);
+async function fetchState(): Promise<TournamentState> {
+  const res = await fetch("/api/state");
+  if (!res.ok) {
+    throw new Error("Failed to fetch state");
   }
-  return next;
-};
+  return res.json();
+}
+
+async function postAction(body: unknown): Promise<{ ok: boolean; state?: TournamentState; message?: string }> {
+  const res = await fetch("/api/state", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: "Request failed" }));
+    return { ok: false, message: err.message ?? "Request failed" };
+  }
+  return res.json();
+}
 
 export function TournamentProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<TournamentState>(() => {
-    try {
-      if (typeof window === "undefined") {
-        return DEFAULT_STATE;
-      }
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as TournamentState;
-        return {
-          ...DEFAULT_STATE,
-          ...parsed,
-          settings: { ...DEFAULT_STATE.settings, ...parsed.settings },
-        };
-      }
-    } catch {
-      return DEFAULT_STATE;
-    }
-    return DEFAULT_STATE;
-  });
+  const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    fetchState()
+      .then((s) => {
+        setState(s);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      fetchState()
+        .then((s) => setState(s))
+        .catch(() => {});
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const spotsRemaining = useMemo(
     () => Math.max(0, state.settings.maxTeams - state.teams.length),
     [state.settings.maxTeams, state.teams.length],
   );
 
-  const registerTeam: TournamentContextValue["registerTeam"] = (payload) => {
-    if (!state.settings.registrationOpen) {
-      return { ok: false, message: "Registration is currently closed." };
+  const registerTeam: TournamentContextValue["registerTeam"] = async (payload) => {
+    const result = await postAction({ type: "register-team", payload });
+    if (result.state) {
+      setState(result.state);
     }
-    if (state.teams.length >= state.settings.maxTeams) {
-      return { ok: false, message: "All spots are filled." };
+    return { ok: result.ok, message: result.message };
+  };
+
+  const submitContactMessage: TournamentContextValue["submitContactMessage"] = async (name, message) => {
+    const result = await postAction({ type: "contact-message", payload: { name, message } });
+    if (result.state) {
+      setState(result.state);
     }
-    const duplicate = state.teams.some(
-      (team) => team.name.trim().toLowerCase() === payload.name.trim().toLowerCase(),
-    );
-    if (duplicate) {
-      return { ok: false, message: "Team name already exists." };
+  };
+
+  const setRegistrationOpen: TournamentContextValue["setRegistrationOpen"] = async (open) => {
+    const result = await postAction({ type: "set-registration-open", payload: { open } });
+    if (result.state) {
+      setState(result.state);
     }
-    const cleanPlayers = payload.players.map((p) => p.trim()).filter(Boolean);
-    if (cleanPlayers.length < 5 || cleanPlayers.length > 7) {
-      return { ok: false, message: "Team must have between 5 and 7 players." };
+  };
+
+  const setGroupsVisible: TournamentContextValue["setGroupsVisible"] = async (visible) => {
+    const result = await postAction({ type: "set-groups-visible", payload: { visible } });
+    if (result.state) {
+      setState(result.state);
     }
-    const nextTeam: Team = {
-      ...payload,
-      players: cleanPlayers,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    setState((prev) => ({ ...prev, teams: [...prev.teams, nextTeam] }));
-    return { ok: true };
   };
 
-  const submitContactMessage = (name: string, message: string) => {
-    setState((prev) => ({
-      ...prev,
-      contactMessages: [
-        ...prev.contactMessages,
-        {
-          id: crypto.randomUUID(),
-          name,
-          message,
-          createdAt: new Date().toISOString(),
-        },
-      ],
-    }));
-  };
-
-  const setRegistrationOpen = (open: boolean) => {
-    setState((prev) => ({ ...prev, settings: { ...prev.settings, registrationOpen: open } }));
-  };
-
-  const setGroupsVisible = (visible: boolean) => {
-    setState((prev) => ({ ...prev, settings: { ...prev.settings, groupsVisible: visible } }));
-  };
-
-  const setBracketVisible = (visible: boolean) => {
-    setState((prev) => ({ ...prev, settings: { ...prev.settings, bracketVisible: visible } }));
-  };
-
-  const setNextTournamentDate = (date: string) => {
-    setState((prev) => ({ ...prev, settings: { ...prev.settings, nextTournamentDate: date } }));
-  };
-
-  const drawGroups = () => {
-    if (state.teams.length !== state.settings.maxTeams) {
-      return { ok: false, message: `You need exactly ${state.settings.maxTeams} teams to draw groups.` };
+  const setBracketVisible: TournamentContextValue["setBracketVisible"] = async (visible) => {
+    const result = await postAction({ type: "set-bracket-visible", payload: { visible } });
+    if (result.state) {
+      setState(result.state);
     }
-    const nextGroups = drawGroupsRandomly(state.teams.map((team) => team.id));
-    const groupMatches = buildGroupMatches(nextGroups);
-    const standings = computeStandings(nextGroups, groupMatches);
-    setState((prev) => ({
-      ...prev,
-      groups: nextGroups,
-      groupMatches,
-      standings,
-      settings: { ...prev.settings, groupsVisible: true },
-    }));
-    return { ok: true };
   };
 
-  const assignTeamToGroup = (teamId: string, group: GroupName) => {
-    setState((prev) => {
-      const nextGroups = ensureUniqueAcrossGroups(prev.groups, teamId, group);
-      const groupMatches = buildGroupMatches(nextGroups);
-      const standings = computeStandings(nextGroups, groupMatches);
-      return { ...prev, groups: nextGroups, groupMatches, standings };
-    });
+  const setNextTournamentDate: TournamentContextValue["setNextTournamentDate"] = async (date) => {
+    const result = await postAction({ type: "set-next-date", payload: { date } });
+    if (result.state) {
+      setState(result.state);
+    }
   };
 
-  const updateGroupMatchScore = (matchId: string, homeScore: number, awayScore: number) => {
-    setState((prev) => {
-      const nextMatches: GroupMatch[] = prev.groupMatches.map((match) =>
-        match.id === matchId ? { ...match, homeScore, awayScore } : match,
-      );
-      const standings = computeStandings(prev.groups, nextMatches);
-      const bracketMatches = seedBracketFromStandings(standings, prev.bracketMatches);
-      return { ...prev, groupMatches: nextMatches, standings, bracketMatches };
-    });
+  const drawGroups: TournamentContextValue["drawGroups"] = async () => {
+    const result = await postAction({ type: "draw-groups" });
+    if (result.state) {
+      setState(result.state);
+    }
+    return { ok: result.ok, message: result.message };
   };
 
-  const updateBracketMatchScore = (matchId: string, homeScore: number, awayScore: number) => {
-    setState((prev) => {
-      const nextMatches: BracketMatch[] = prev.bracketMatches.map((match) =>
-        match.id === matchId ? { ...match, homeScore, awayScore } : match,
-      );
-      return { ...prev, bracketMatches: nextMatches };
-    });
+  const assignTeamToGroup: TournamentContextValue["assignTeamToGroup"] = async (teamId, group) => {
+    const result = await postAction({ type: "assign-team-group", payload: { teamId, group } });
+    if (result.state) {
+      setState(result.state);
+    }
+  };
+
+  const updateGroupMatchScore: TournamentContextValue["updateGroupMatchScore"] = async (
+    matchId,
+    homeScore,
+    awayScore,
+  ) => {
+    const result = await postAction({ type: "update-group-score", payload: { matchId, homeScore, awayScore } });
+    if (result.state) {
+      setState(result.state);
+    }
+  };
+
+  const updateBracketMatchScore: TournamentContextValue["updateBracketMatchScore"] = async (
+    matchId,
+    homeScore,
+    awayScore,
+  ) => {
+    const result = await postAction({ type: "update-bracket-score", payload: { matchId, homeScore, awayScore } });
+    if (result.state) {
+      setState(result.state);
+    }
+  };
+
+  const setTeamStatus: TournamentContextValue["setTeamStatus"] = async (teamId, status) => {
+    const result = await postAction({ type: "set-team-status", payload: { teamId, status } });
+    if (result.state) {
+      setState(result.state);
+    }
+  };
+
+  const editTeam: TournamentContextValue["editTeam"] = async (teamId, payload) => {
+    const result = await postAction({ type: "edit-team", payload: { teamId, ...payload } });
+    if (result.state) {
+      setState(result.state);
+    }
+    return { ok: result.ok, message: result.message };
   };
 
   const value: TournamentContextValue = {
@@ -193,6 +181,8 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     assignTeamToGroup,
     updateGroupMatchScore,
     updateBracketMatchScore,
+    setTeamStatus,
+    editTeam,
   };
 
   return <TournamentContext.Provider value={value}>{children}</TournamentContext.Provider>;

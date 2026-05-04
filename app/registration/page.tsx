@@ -36,7 +36,7 @@ export default function RegistrationPage() {
     setPlayers((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  const onSubmit = (event: React.FormEvent) => {
+  const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!teamName || !captainName || !captainPhone || !captainEmail) {
       toast.error("Please complete all required fields.");
@@ -46,7 +46,7 @@ export default function RegistrationPage() {
       toast.error("Team must include 5 to 7 players.");
       return;
     }
-    const result = registerTeam({
+    const result = await registerTeam({
       name: teamName,
       captainName,
       captainPhone,
@@ -57,7 +57,7 @@ export default function RegistrationPage() {
       toast.error(result.message ?? "Registration failed.");
       return;
     }
-    toast.success("Team registered successfully.");
+    toast.success("Registration submitted for admin approval.");
     setTeamName("");
     setCaptainName("");
     setCaptainPhone("");

@@ -7,6 +7,7 @@ export type Team = {
   captainPhone: string;
   captainEmail: string;
   players: string[];
+  status: "pending" | "approved" | "denied";
   createdAt: string;
 };
 

@@ -4,14 +4,14 @@ import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { PageShell } from "@/components/page-shell";
 import { useTournament } from "@/components/tournament-provider";
-import { GroupName } from "@/lib/types";
+import { GroupName, Team, TournamentState } from "@/lib/types";
 
 const groupNames: GroupName[] = ["A", "B", "C", "D"];
 
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authorized, setAuthorized] = useState(false);
-  const { state, drawGroups, assignTeamToGroup, updateGroupMatchScore, updateBracketMatchScore } = useTournament();
+  const { state, drawGroups, assignTeamToGroup, updateGroupMatchScore, updateBracketMatchScore, setTeamStatus, editTeam } = useTournament();
   const {
     setRegistrationOpen,
     setGroupsVisible,
@@ -21,7 +21,7 @@ export default function AdminPage() {
 
   const teamById = useMemo(() => new Map(state.teams.map((team) => [team.id, team])), [state.teams]);
 
-  const login = (event: React.FormEvent) => {
+  const login = async (event: React.FormEvent) => {
     event.preventDefault();
     if (password === "allstar2026") {
       setAuthorized(true);
@@ -79,12 +79,21 @@ export default function AdminPage() {
       </section>
 
       <section className="card mt-6">
+        <h2 className="text-xl font-bold text-[#FFD700]">Team Approval & Management</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {state.teams.map((team) => (
+            <TeamAdminCard key={team.id} team={team} state={state} setTeamStatus={setTeamStatus} editTeam={editTeam} />
+          ))}
+        </div>
+      </section>
+
+      <section className="card mt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-bold text-[#FFD700]">Group Assignment</h2>
           <button
             type="button"
-            onClick={() => {
-              const result = drawGroups();
+            onClick={async () => {
+              const result = await drawGroups();
               if (!result.ok) {
                 toast.error(result.message ?? "Cannot draw groups.");
                 return;
@@ -104,7 +113,7 @@ export default function AdminPage() {
               <select
                 className="mt-2 w-full rounded border border-white/15 bg-[#071224] px-2 py-2 text-sm"
                 value={groupNames.find((group) => state.groups[group].includes(team.id)) ?? ""}
-                onChange={(event) => assignTeamToGroup(team.id, event.target.value as GroupName)}
+                onChange={async (event) => await assignTeamToGroup(team.id, event.target.value as GroupName)}
               >
                 <option value="">Select Group</option>
                 {groupNames.map((group) => (
@@ -128,8 +137,8 @@ export default function AdminPage() {
                 type="number"
                 min={0}
                 defaultValue={match.homeScore ?? ""}
-                onBlur={(event) =>
-                  updateGroupMatchScore(
+                onBlur={async (event) =>
+                  await updateGroupMatchScore(
                     match.id,
                     Number(event.currentTarget.value || 0),
                     match.awayScore ?? 0,
@@ -142,8 +151,8 @@ export default function AdminPage() {
                 type="number"
                 min={0}
                 defaultValue={match.awayScore ?? ""}
-                onBlur={(event) =>
-                  updateGroupMatchScore(
+                onBlur={async (event) =>
+                  await updateGroupMatchScore(
                     match.id,
                     match.homeScore ?? 0,
                     Number(event.currentTarget.value || 0),
@@ -166,8 +175,8 @@ export default function AdminPage() {
                 type="number"
                 min={0}
                 defaultValue={match.homeScore ?? ""}
-                onBlur={(event) =>
-                  updateBracketMatchScore(
+                onBlur={async (event) =>
+                  await updateBracketMatchScore(
                     match.id,
                     Number(event.currentTarget.value || 0),
                     match.awayScore ?? 0,
@@ -180,8 +189,8 @@ export default function AdminPage() {
                 type="number"
                 min={0}
                 defaultValue={match.awayScore ?? ""}
-                onBlur={(event) =>
-                  updateBracketMatchScore(
+                onBlur={async (event) =>
+                  await updateBracketMatchScore(
                     match.id,
                     match.homeScore ?? 0,
                     Number(event.currentTarget.value || 0),
@@ -194,5 +203,126 @@ export default function AdminPage() {
         </div>
       </section>
     </PageShell>
+  );
+}
+
+function TeamAdminCard({
+  team,
+  state,
+  setTeamStatus,
+  editTeam,
+}: {
+  team: Team;
+  state: TournamentState;
+  setTeamStatus: (teamId: string, status: "pending" | "approved" | "denied") => Promise<void>;
+  editTeam: (teamId: string, payload: Omit<Team, "id" | "createdAt" | "status">) => Promise<{ ok: boolean; message?: string }>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(team.name);
+  const [captainName, setCaptainName] = useState(team.captainName);
+  const [captainPhone, setCaptainPhone] = useState(team.captainPhone);
+  const [captainEmail, setCaptainEmail] = useState(team.captainEmail);
+  const [players, setPlayers] = useState(team.players.join(", "));
+
+  const statusColor =
+    team.status === "approved" ? "text-green-400" : team.status === "denied" ? "text-red-400" : "text-yellow-400";
+
+  const saveEdit = async () => {
+    const playerList = players.split(",").map((p) => p.trim()).filter(Boolean);
+    const result = await editTeam(team.id, {
+      name,
+      captainName,
+      captainPhone,
+      captainEmail,
+      players: playerList,
+    });
+    if (!result.ok) {
+      toast.error(result.message ?? "Failed to save.");
+      return;
+    }
+    toast.success("Team updated.");
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#0c1a31] p-3">
+      <div className="flex items-center justify-between">
+        <span className={`text-xs font-bold uppercase ${statusColor}`}>{team.status}</span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="rounded border border-white/20 px-2 py-1 text-xs hover:border-green-400"
+            onClick={async () => {
+              await setTeamStatus(team.id, "approved");
+              toast.success("Team approved.");
+            }}
+          >
+            Approve
+          </button>
+          <button
+            type="button"
+            className="rounded border border-white/20 px-2 py-1 text-xs hover:border-red-400"
+            onClick={async () => {
+              await setTeamStatus(team.id, "denied");
+              toast.success("Team denied.");
+            }}
+          >
+            Deny
+          </button>
+          <button
+            type="button"
+            className="rounded border border-white/20 px-2 py-1 text-xs hover:border-[#FFD700]"
+            onClick={() => setIsEditing((v) => !v)}
+          >
+            {isEditing ? "Cancel" : "Edit"}
+          </button>
+        </div>
+      </div>
+
+      {isEditing ? (
+        <div className="mt-3 space-y-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Team Name"
+            className="w-full rounded border border-white/15 bg-[#071224] px-2 py-1 text-sm"
+          />
+          <input
+            value={captainName}
+            onChange={(e) => setCaptainName(e.target.value)}
+            placeholder="Captain Name"
+            className="w-full rounded border border-white/15 bg-[#071224] px-2 py-1 text-sm"
+          />
+          <input
+            value={captainPhone}
+            onChange={(e) => setCaptainPhone(e.target.value)}
+            placeholder="Captain Phone"
+            className="w-full rounded border border-white/15 bg-[#071224] px-2 py-1 text-sm"
+          />
+          <input
+            value={captainEmail}
+            onChange={(e) => setCaptainEmail(e.target.value)}
+            placeholder="Captain Email"
+            className="w-full rounded border border-white/15 bg-[#071224] px-2 py-1 text-sm"
+          />
+          <textarea
+            value={players}
+            onChange={(e) => setPlayers(e.target.value)}
+            placeholder="Players (comma separated)"
+            rows={3}
+            className="w-full rounded border border-white/15 bg-[#071224] px-2 py-1 text-sm"
+          />
+          <button type="button" className="rounded bg-[#FFD700] px-3 py-1 text-sm font-semibold text-[#0A1628]" onClick={saveEdit}>
+            Save
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2">
+          <p className="font-semibold">{team.name}</p>
+          <p className="text-sm text-white/70">Captain: {team.captainName}</p>
+          <p className="text-sm text-white/70">Players: {team.players.length}</p>
+        </div>
+      )}
+    </div>
   );
 }
