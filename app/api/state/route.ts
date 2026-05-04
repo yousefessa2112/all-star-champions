@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { readState, writeState } from "@/lib/server-store";
 import { buildGroupMatches, computeStandings, drawGroupsRandomly, seedBracketFromStandings } from "@/lib/tournament-utils";
+import { sendContactEmail } from "@/lib/email";
 import { GroupMatch, GroupName, Team } from "@/lib/types";
 
 type ActionPayload =
@@ -25,6 +26,7 @@ type ActionPayload =
         players: string[];
       };
     }
+  | { type: "delete-team"; payload: { teamId: string } }
   | { type: "contact-message"; payload: { name: string; message: string } };
 
 const ensureUniqueAcrossGroups = (
@@ -58,7 +60,8 @@ export async function POST(request: Request) {
       if (!state.settings.registrationOpen) {
         return NextResponse.json({ ok: false, message: "Registration is currently closed." }, { status: 400 });
       }
-      if (state.teams.length >= state.settings.maxTeams) {
+      const activeTeams = state.teams.filter((t) => t.status !== "denied");
+      if (activeTeams.length >= state.settings.maxTeams) {
         return NextResponse.json({ ok: false, message: "All spots are filled." }, { status: 400 });
       }
       const duplicate = state.teams.some(
@@ -89,7 +92,14 @@ export async function POST(request: Request) {
         createdAt: new Date().toISOString(),
       });
       await writeState(state);
-      return NextResponse.json({ ok: true, state });
+      
+      // Send email notification
+      const emailResult = await sendContactEmail(body.payload.name, body.payload.message);
+      if (!emailResult.ok) {
+        console.error("Failed to send contact email:", emailResult.error);
+      }
+      
+      return NextResponse.json({ ok: true, state, emailSent: emailResult.ok });
     }
     case "set-registration-open":
       state.settings.registrationOpen = body.payload.open;
@@ -176,6 +186,16 @@ export async function POST(request: Request) {
             }
           : team,
       );
+      break;
+    }
+    case "delete-team": {
+      state.teams = state.teams.filter((team) => team.id !== body.payload.teamId);
+      Object.keys(state.groups).forEach((g) => {
+        const group = g as GroupName;
+        state.groups[group] = state.groups[group].filter((id) => id !== body.payload.teamId);
+      });
+      state.groupMatches = buildGroupMatches(state.groups);
+      state.standings = computeStandings(state.groups, state.groupMatches);
       break;
     }
     default:

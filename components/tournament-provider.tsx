@@ -21,6 +21,7 @@ type TournamentContextValue = {
   updateBracketMatchScore: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
   setTeamStatus: (teamId: string, status: "pending" | "approved" | "denied") => Promise<void>;
   editTeam: (teamId: string, payload: NewTeamInput) => Promise<{ ok: boolean; message?: string }>;
+  deleteTeam: (teamId: string) => Promise<void>;
 };
 
 const TournamentContext = createContext<TournamentContextValue | null>(null);
@@ -69,8 +70,8 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const spotsRemaining = useMemo(
-    () => Math.max(0, state.settings.maxTeams - state.teams.length),
-    [state.settings.maxTeams, state.teams.length],
+    () => Math.max(0, state.settings.maxTeams - state.teams.filter((t) => t.status !== "denied").length),
+    [state.settings.maxTeams, state.teams],
   );
 
   const registerTeam: TournamentContextValue["registerTeam"] = async (payload) => {
@@ -168,6 +169,13 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     return { ok: result.ok, message: result.message };
   };
 
+  const deleteTeam: TournamentContextValue["deleteTeam"] = async (teamId) => {
+    const result = await postAction({ type: "delete-team", payload: { teamId } });
+    if (result.state) {
+      setState(result.state);
+    }
+  };
+
   const value: TournamentContextValue = {
     state,
     spotsRemaining,
@@ -183,6 +191,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     updateBracketMatchScore,
     setTeamStatus,
     editTeam,
+    deleteTeam,
   };
 
   return <TournamentContext.Provider value={value}>{children}</TournamentContext.Provider>;

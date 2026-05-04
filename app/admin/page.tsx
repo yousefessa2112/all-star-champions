@@ -11,7 +11,7 @@ const groupNames: GroupName[] = ["A", "B", "C", "D"];
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authorized, setAuthorized] = useState(false);
-  const { state, drawGroups, assignTeamToGroup, updateGroupMatchScore, updateBracketMatchScore, setTeamStatus, editTeam } = useTournament();
+  const { state, drawGroups, assignTeamToGroup, updateGroupMatchScore, updateBracketMatchScore, setTeamStatus, editTeam, deleteTeam } = useTournament();
   const {
     setRegistrationOpen,
     setGroupsVisible,
@@ -82,7 +82,7 @@ export default function AdminPage() {
         <h2 className="text-xl font-bold text-[#FFD700]">Team Approval & Management</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {state.teams.map((team) => (
-            <TeamAdminCard key={team.id} team={team} state={state} setTeamStatus={setTeamStatus} editTeam={editTeam} />
+            <TeamAdminCard key={team.id} team={team} state={state} setTeamStatus={setTeamStatus} editTeam={editTeam} deleteTeam={deleteTeam} />
           ))}
         </div>
       </section>
@@ -211,11 +211,13 @@ function TeamAdminCard({
   state,
   setTeamStatus,
   editTeam,
+  deleteTeam,
 }: {
   team: Team;
   state: TournamentState;
   setTeamStatus: (teamId: string, status: "pending" | "approved" | "denied") => Promise<void>;
   editTeam: (teamId: string, payload: Omit<Team, "id" | "createdAt" | "status">) => Promise<{ ok: boolean; message?: string }>;
+  deleteTeam: (teamId: string) => Promise<void>;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(team.name);
@@ -268,6 +270,19 @@ function TeamAdminCard({
             }}
           >
             Deny
+          </button>
+          <button
+            type="button"
+            className="rounded border border-white/20 px-2 py-1 text-xs hover:border-red-600"
+            onClick={async () => {
+              if (!window.confirm(`Delete team "${team.name}"? This cannot be undone.`)) {
+                return;
+              }
+              await deleteTeam(team.id);
+              toast.success("Team deleted.");
+            }}
+          >
+            Delete
           </button>
           <button
             type="button"
