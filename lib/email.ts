@@ -32,3 +32,32 @@ export async function sendContactEmail(name: string, message: string) {
     return { ok: false, error: String(error) };
   }
 }
+
+export async function sendRegistrationConfirmation(email: string, teamName: string) {
+  try {
+    await transporter.sendMail({
+      from: `"All Star Champions" <${process.env.SMTP_USER || "allstarchampions@example.com"}>`,
+      to: email,
+      subject: "Team Registration Received - All Star Champions",
+      text: `Thank you for registering your team "${teamName}" for the All Star Champions tournament!\n\nYour registration has been received and is pending admin approval. You will be notified once your team has been reviewed.\n\nIf you have any questions, please contact us at 929-304-3899 or @all_star_champions on Instagram.\n\nBest regards,\nAll Star Champions Team`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #FFD700;">Thank You for Registering!</h2>
+          <p>Your team <strong>"${teamName}"</strong> has been registered for the All Star Champions tournament.</p>
+          <p>Your registration is currently <strong>pending admin approval</strong>. You will be notified once your team has been reviewed.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="color: #666; font-size: 14px;">
+            If you have any questions, please contact us:<br/>
+            <strong>Phone:</strong> 929-304-3899<br/>
+            <strong>Instagram:</strong> @all_star_champions
+          </p>
+          <p style="color: #666; font-size: 14px;">Best regards,<br/>All Star Champions Team</p>
+        </div>
+      `,
+    });
+    return { ok: true };
+  } catch (error) {
+    console.error("Failed to send confirmation email:", error);
+    return { ok: false, error: String(error) };
+  }
+}

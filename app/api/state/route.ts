@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readState, writeState } from "@/lib/server-store";
 import { buildGroupMatches, computeStandings, drawGroupsRandomly, seedBracketFromStandings } from "@/lib/tournament-utils";
-import { sendContactEmail } from "@/lib/email";
+import { sendContactEmail, sendRegistrationConfirmation } from "@/lib/email";
 import { GroupMatch, GroupName, Team } from "@/lib/types";
 
 type ActionPayload =
@@ -82,6 +82,13 @@ export async function POST(request: Request) {
         createdAt: new Date().toISOString(),
       });
       await writeState(state);
+      
+      // Send confirmation email to the team captain
+      const confirmResult = await sendRegistrationConfirmation(body.payload.captainEmail, body.payload.name);
+      if (!confirmResult.ok) {
+        console.error("Failed to send confirmation email:", confirmResult.error);
+      }
+      
       return NextResponse.json({ ok: true, state, message: "Registration submitted for admin approval." });
     }
     case "contact-message": {
