@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a1628;
+  --foreground: #f9fbff;
+  --gold: #ffd700;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-gold: var(--gold);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+}
+
+* {
+  scrollbar-color: #ffd70055 #0a1628;
+}
+
+.card {
+  @apply rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm;
+}
+
+.gold-btn {
+  @apply inline-flex items-center justify-center rounded-xl bg-[#FFD700] px-5 py-3 font-semibold text-[#0A1628] transition hover:brightness-110;
+}
+
+.section-title {
+  @apply text-2xl font-black tracking-wide text-white sm:text-3xl;
+}
