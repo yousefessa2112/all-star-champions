@@ -1,21 +1,33 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER || "",
-    pass: process.env.SMTP_PASS || "",
-  },
-});
+function isEmailConfigured(): boolean {
+  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
+function createTransporter() {
+  if (!isEmailConfigured()) return null;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+}
 
 export async function sendContactEmail(name: string, message: string) {
-  const to = process.env.CONTACT_EMAIL || "9293043899@txt.att.net";
-  
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.log("Email not configured — contact message stored only.");
+    return { ok: false, error: "Email not configured" };
+  }
+
+  const to = process.env.CONTACT_EMAIL || process.env.SMTP_USER || "";
   try {
     await transporter.sendMail({
-      from: process.env.SMTP_USER || "allstarchampions@example.com",
+      from: process.env.SMTP_USER,
       to,
       subject: `New Contact Message from ${name}`,
       text: `From: ${name}\n\nMessage:\n${message}`,
@@ -34,9 +46,15 @@ export async function sendContactEmail(name: string, message: string) {
 }
 
 export async function sendRegistrationConfirmation(email: string, teamName: string) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.log("Email not configured — skipping registration confirmation.");
+    return { ok: false, error: "Email not configured" };
+  }
+
   try {
     await transporter.sendMail({
-      from: `"All Star Champions" <${process.env.SMTP_USER || "allstarchampions@example.com"}>`,
+      from: `"All Star Champions" <${process.env.SMTP_USER}>`,
       to: email,
       subject: "Team Registration Received - All Star Champions",
       text: `Thank you for registering your team "${teamName}" for the All Star Champions tournament!\n\nYour registration has been received and is pending admin approval. You will be notified once your team has been reviewed.\n\nIf you have any questions, please contact us at 929-304-3899 or @all_star_champions on Instagram.\n\nBest regards,\nAll Star Champions Team`,

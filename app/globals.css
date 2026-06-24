@@ -1,36 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
 :root {
-  --background: #0a1628;
-  --foreground: #f9fbff;
-  --gold: #ffd700;
+  --bg: #F5F0EB;
+  --bg-dark: #0A1628;
+  --text: #0A1628;
+  --text-light: #666666;
+  --gold: #FFD700;
+  --gold-dark: #E6C200;
+  --white: #FFFFFF;
+  --border: #D4D0CB;
+  --card-bg: #FFFFFF;
+  --card-border: #E8E4DF;
+  --navy: #0A1628;
+  --navy-light: #132240;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
   --color-gold: var(--gold);
-  --font-sans: var(--font-inter);
+  --font-sans: 'Inter', Arial, Helvetica, sans-serif;
+  --font-heading: 'Oswald', 'Arial Black', sans-serif;
+  --font-condensed: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
 
 * {
-  scrollbar-color: #ffd70055 #0a1628;
+  scrollbar-color: #FFD70066 var(--bg);
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--navy);
+}
+
+.font-heading {
+  font-family: 'Oswald', 'Arial Black', sans-serif;
+}
+
+.font-condensed {
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
 }
 
 .card {
-  @apply rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm;
+  @apply rounded-none border border-[#E8E4DF] bg-white p-5;
 }
 
 .gold-btn {
-  @apply inline-flex items-center justify-center rounded-xl bg-[#FFD700] px-5 py-3 font-semibold text-[#0A1628] transition hover:brightness-110;
+  @apply inline-flex items-center justify-center bg-[#FFD700] px-6 py-3 font-bold uppercase tracking-wider text-[#0A1628] transition-all hover:bg-[#E6C200] active:scale-[0.98];
+  font-family: 'Oswald', 'Arial Black', sans-serif;
+}
+
+.outline-btn {
+  @apply inline-flex items-center justify-center border-2 border-[#0A1628] px-6 py-3 font-bold uppercase tracking-wider text-[#0A1628] transition-all hover:bg-[#0A1628] hover:text-white active:scale-[0.98];
+  font-family: 'Oswald', 'Arial Black', sans-serif;
 }
 
 .section-title {
-  @apply text-2xl font-black tracking-wide text-white sm:text-3xl;
+  @apply text-3xl font-bold uppercase tracking-wider text-[#0A1628] sm:text-4xl;
+  font-family: 'Oswald', 'Arial Black', sans-serif;
+}
+
+.input-field {
+  @apply w-full border-2 border-[#D4D0CB] bg-white px-4 py-3 text-[#0A1628] outline-none transition-colors focus:border-[#FFD700] placeholder:text-[#999];
+}
+
+/* Noise texture overlay */
+.noise-bg {
+  position: relative;
+}
+.noise-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Gold brush stroke */
+.brush-stroke {
+  position: relative;
+}
+.brush-stroke::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: #FFD700;
+  transform: skewX(-12deg);
+}
+
+/* Gritty border */
+.gritty-border {
+  border: 3px solid #0A1628;
+  position: relative;
+}
+
+/* Vertical text */
+.vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }

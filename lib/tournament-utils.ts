@@ -1,6 +1,4 @@
-import { BracketMatch, GroupName, GroupStanding, Team } from "@/lib/types";
-
-const groupNames: GroupName[] = ["A", "B", "C", "D"];
+import { BracketMatch, GroupName, GroupStanding, Team, ALL_GROUPS } from "@/lib/types";
 
 export const shuffleArray = <T,>(items: T[]): T[] => {
   const copy = [...items];
@@ -11,18 +9,30 @@ export const shuffleArray = <T,>(items: T[]): T[] => {
   return copy;
 };
 
+export const emptyGroups = (): Record<GroupName, string[]> => {
+  const groups = {} as Record<GroupName, string[]>;
+  ALL_GROUPS.forEach((g) => { groups[g] = []; });
+  return groups;
+};
+
+export const emptyStandings = (): Record<GroupName, GroupStanding[]> => {
+  const standings = {} as Record<GroupName, GroupStanding[]>;
+  ALL_GROUPS.forEach((g) => { standings[g] = []; });
+  return standings;
+};
+
 export const drawGroupsRandomly = (teamIds: string[]): Record<GroupName, string[]> => {
   const shuffled = shuffleArray(teamIds);
-  const groups: Record<GroupName, string[]> = { A: [], B: [], C: [], D: [] };
+  const groups = emptyGroups();
   shuffled.forEach((id, index) => {
-    const bucket = groupNames[Math.floor(index / 4)];
+    const bucket = ALL_GROUPS[Math.floor(index / 4)];
     groups[bucket].push(id);
   });
   return groups;
 };
 
 export const buildGroupMatches = (groups: Record<GroupName, string[]>) => {
-  return groupNames.flatMap((group) => {
+  return ALL_GROUPS.flatMap((group) => {
     const ids = groups[group];
     const matches: Array<{
       id: string;
@@ -58,8 +68,8 @@ export const computeStandings = (
     awayScore: number | null;
   }>,
 ): Record<GroupName, GroupStanding[]> => {
-  const standings: Record<GroupName, GroupStanding[]> = { A: [], B: [], C: [], D: [] };
-  groupNames.forEach((group) => {
+  const standings = emptyStandings();
+  ALL_GROUPS.forEach((group) => {
     const table = new Map<string, GroupStanding>();
     groups[group].forEach((teamId) => {
       table.set(teamId, { teamId, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, points: 0 });
@@ -70,27 +80,18 @@ export const computeStandings = (
       .forEach((match) => {
         const home = table.get(match.homeTeamId);
         const away = table.get(match.awayTeamId);
-        if (!home || !away || match.homeScore === null || match.awayScore === null) {
-          return;
-        }
+        if (!home || !away || match.homeScore === null || match.awayScore === null) return;
         home.gf += match.homeScore;
         home.ga += match.awayScore;
         away.gf += match.awayScore;
         away.ga += match.homeScore;
 
         if (match.homeScore > match.awayScore) {
-          home.w += 1;
-          home.points += 3;
-          away.l += 1;
+          home.w += 1; home.points += 3; away.l += 1;
         } else if (match.homeScore < match.awayScore) {
-          away.w += 1;
-          away.points += 3;
-          home.l += 1;
+          away.w += 1; away.points += 3; home.l += 1;
         } else {
-          home.d += 1;
-          away.d += 1;
-          home.points += 1;
-          away.points += 1;
+          home.d += 1; away.d += 1; home.points += 1; away.points += 1;
         }
       });
 
@@ -107,36 +108,28 @@ export const seedBracketFromStandings = (
 ): BracketMatch[] => {
   const rank = (group: GroupName, pos: number) => standings[group][pos]?.teamId ?? null;
 
-  const qfSeeds: [string | null, string | null][] = [
+  // 8 groups -> top 2 from each group -> 16 teams -> Round of 16
+  // Classic FIFA-style: 1A vs 2B, 1C vs 2D, 1E vs 2F, 1G vs 2H, 1B vs 2A, 1D vs 2C, 1F vs 2E, 1H vs 2G
+  const r16Seeds: [string | null, string | null][] = [
     [rank("A", 0), rank("B", 1)],
-    [rank("B", 0), rank("A", 1)],
     [rank("C", 0), rank("D", 1)],
+    [rank("E", 0), rank("F", 1)],
+    [rank("G", 0), rank("H", 1)],
+    [rank("B", 0), rank("A", 1)],
     [rank("D", 0), rank("C", 1)],
-    [rank("A", 0), rank("C", 1)],
-    [rank("C", 0), rank("A", 1)],
-    [rank("B", 0), rank("D", 1)],
-    [rank("D", 0), rank("B", 1)],
+    [rank("F", 0), rank("E", 1)],
+    [rank("H", 0), rank("G", 1)],
   ];
 
   return existing.map((match) => {
-    if (match.round !== "quarterfinals") {
-      return match;
-    }
+    if (match.round !== "round-of-16") return match;
     const index = Number(match.id.split("-")[1]) - 1;
-    const [home, away] = qfSeeds[index] ?? [null, null];
-    return {
-      ...match,
-      homeTeamId: home,
-      awayTeamId: away,
-      homeScore: null,
-      awayScore: null,
-    };
+    const [home, away] = r16Seeds[index] ?? [null, null];
+    return { ...match, homeTeamId: home, awayTeamId: away, homeScore: null, awayScore: null };
   });
 };
 
 export const teamNameById = (teams: Team[], id: string | null): string => {
-  if (!id) {
-    return "TBD";
-  }
+  if (!id) return "TBD";
   return teams.find((team) => team.id === id)?.name ?? "TBD";
 };

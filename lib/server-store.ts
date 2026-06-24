@@ -1,10 +1,8 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { kv } from "@vercel/kv";
 import { DEFAULT_STATE } from "@/lib/default-data";
 import { TournamentState } from "@/lib/types";
 
-const dataDir = process.env.NODE_ENV === "production" ? "/tmp" : path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDir, "tournament-state.json");
+const KV_KEY = "tournament-state-v2";
 
 const normalizeState = (raw: TournamentState): TournamentState => {
   return {
@@ -14,23 +12,30 @@ const normalizeState = (raw: TournamentState): TournamentState => {
       ...team,
       status: team.status ?? "approved",
     })),
+    contactMessages: raw.contactMessages ?? [],
     settings: { ...DEFAULT_STATE.settings, ...raw.settings },
   };
 };
 
 export async function readState(): Promise<TournamentState> {
   try {
-    const content = await fs.readFile(dataFile, "utf8");
-    const parsed = JSON.parse(content) as TournamentState;
-    return normalizeState(parsed);
-  } catch {
-    await fs.mkdir(dataDir, { recursive: true });
-    await fs.writeFile(dataFile, JSON.stringify(DEFAULT_STATE, null, 2), "utf8");
+    const data = await kv.get<TournamentState>(KV_KEY);
+    if (!data) {
+      await kv.set(KV_KEY, DEFAULT_STATE);
+      return DEFAULT_STATE;
+    }
+    return normalizeState(data);
+  } catch (error) {
+    console.error("KV read error, returning default state:", error);
     return DEFAULT_STATE;
   }
 }
 
 export async function writeState(next: TournamentState): Promise<void> {
-  await fs.mkdir(dataDir, { recursive: true });
-  await fs.writeFile(dataFile, JSON.stringify(next, null, 2), "utf8");
+  try {
+    await kv.set(KV_KEY, next);
+  } catch (error) {
+    console.error("KV write error:", error);
+    throw error;
+  }
 }

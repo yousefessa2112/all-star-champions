@@ -1,4 +1,6 @@
-export type GroupName = "A" | "B" | "C" | "D";
+export type GroupName = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+
+export const ALL_GROUPS: GroupName[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 export type Team = {
   id: string;
@@ -31,7 +33,7 @@ export type GroupStanding = {
   points: number;
 };
 
-export type BracketRound = "quarterfinals" | "semifinals" | "final";
+export type BracketRound = "round-of-16" | "quarterfinals" | "semifinals" | "final";
 
 export type BracketMatch = {
   id: string;
