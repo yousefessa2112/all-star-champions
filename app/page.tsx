@@ -181,11 +181,14 @@ export default function HomePage() {
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
             <AnimateIn direction="left">
               <div className="relative">
-                <div className="aspect-[4/3] bg-[#132240] border-2 border-white/10 flex items-center justify-center overflow-hidden">
-                  <div className="text-center p-8">
-                    <p className="font-heading text-6xl font-bold text-white/10 sm:text-8xl">BK</p>
-                    <p className="font-condensed text-sm tracking-[0.3em] text-white/30 mt-2">BROOKLYN BUILT DIFFERENT</p>
-                  </div>
+                <div className="aspect-[4/3] bg-[#132240] border-2 border-white/10 overflow-hidden">
+                  <Image
+                    src="/venue-field.png"
+                    alt="SoFive Brooklyn indoor soccer facility with turf field and dramatic lighting"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                  />
                 </div>
               </div>
             </AnimateIn>
