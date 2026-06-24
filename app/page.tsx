@@ -34,30 +34,28 @@ export default function HomePage() {
   return (
     <div className="noise-bg">
       {/* HERO SECTION */}
-      <section className="relative overflow-hidden bg-[#F5F0EB]">
-        {/* Hero player image - right side */}
-        <div className="absolute right-0 top-0 h-full w-[55%] sm:w-[50%] lg:w-[45%] pointer-events-none">
-          <Image
-            src="/hero-player.png"
-            alt="Soccer player in action"
-            fill
-            className="object-cover object-top"
-            priority
-            sizes="(max-width: 640px) 55vw, (max-width: 1024px) 50vw, 45vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#F5F0EB] via-[#F5F0EB]/40 to-transparent" />
-        </div>
+      <section className="relative overflow-hidden min-h-[70vh] sm:min-h-[80vh] flex items-center">
+        {/* Background pitch image */}
+        <Image
+          src="/hero-field.png"
+          alt="Brooklyn street soccer pitch under dramatic lights"
+          fill
+          className="object-cover object-center"
+          priority
+          sizes="100vw"
+          quality={90}
+        />
+        {/* Dark navy gradient overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0A1628]/95 via-[#0A1628]/80 to-[#0A1628]/50 z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0A1628] via-transparent to-[#0A1628]/60 z-[1]" />
 
-        {/* Ink splatter / grunge overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#F5F0EB] to-transparent pointer-events-none z-[2]" />
-        
-        <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="relative py-16 sm:py-20 lg:py-28">
+        <div className="relative z-[3] mx-auto max-w-7xl px-4 lg:px-8 w-full">
+          <div className="py-16 sm:py-20 lg:py-28">
             <motion.p
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
-              className="font-condensed text-sm font-bold italic tracking-wider text-[#FFD700] sm:text-base relative z-[3]"
+              className="font-condensed text-sm font-bold italic tracking-wider text-[#FFD700] sm:text-base"
             >
               MORE THAN A GAME. THIS IS OUR CULTURE.
             </motion.p>
@@ -66,7 +64,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
-              className="font-heading mt-4 text-[clamp(3.5rem,12vw,9rem)] font-bold leading-[0.85] tracking-tight text-[#0A1628] uppercase relative z-[3]"
+              className="font-heading mt-4 text-[clamp(3.5rem,12vw,9rem)] font-bold leading-[0.85] tracking-tight text-white uppercase drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
             >
               ALL STAR<br />
               CHAMPIONS
@@ -77,7 +75,7 @@ export default function HomePage() {
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="mt-3 h-4 w-72 origin-left sm:w-[28rem] relative z-[3]"
+              className="mt-3 h-4 w-72 origin-left sm:w-[28rem]"
               style={{
                 background: "linear-gradient(90deg, #FFD700 0%, #E6C200 60%, #FFD700 100%)",
                 transform: "skewX(-12deg)",
@@ -89,7 +87,7 @@ export default function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="mt-6 flex flex-wrap items-center gap-3 font-condensed text-xs font-semibold tracking-[0.2em] text-[#0A1628]/70 uppercase sm:text-sm relative z-[3]"
+              className="mt-6 flex flex-wrap items-center gap-3 font-condensed text-xs font-semibold tracking-[0.2em] text-white/70 uppercase sm:text-sm"
             >
               <span>BROOKLYN, NEW YORK</span>
               <span className="text-[#FFD700]">&#9679;</span>
@@ -98,7 +96,7 @@ export default function HomePage() {
               <span>ONE CHAMPION</span>
             </motion.div>
 
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden xl:block z-[3]">
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden xl:block">
               <p className="vertical-text font-heading text-xs font-bold tracking-[0.3em] text-[#FFD700]/60">
                 2026 ALL STAR CHAMPIONS TOURNAMENT
               </p>
