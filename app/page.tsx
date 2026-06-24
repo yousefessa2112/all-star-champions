@@ -37,8 +37,8 @@ export default function HomePage() {
       <section className="relative overflow-hidden min-h-[70vh] sm:min-h-[80vh] flex items-center">
         {/* Background pitch image */}
         <Image
-          src="/hero-field.png"
-          alt="Brooklyn street soccer pitch under dramatic lights"
+          src="/hero-player.png"
+          alt="Soccer player in action"
           fill
           className="object-cover object-center"
           priority
