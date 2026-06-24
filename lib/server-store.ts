@@ -33,7 +33,7 @@ const normalizeState = (raw: TournamentState): TournamentState => {
 // ---------------------------------------------------------------------------
 
 function buildRedisClient(): Redis | null {
-  const rawUrl = process.env.REDIS_URL;
+  const rawUrl = process.env.REDIS_URL?.trim();
   if (!rawUrl) return null;
 
   if (rawUrl.startsWith("https://")) {

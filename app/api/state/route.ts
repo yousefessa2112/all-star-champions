@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readState, writeState } from "@/lib/server-store";
 import { buildGroupMatches, computeStandings, drawGroupsRandomly, emptyGroups, seedBracketFromStandings } from "@/lib/tournament-utils";
-import { sendContactEmail, sendRegistrationConfirmation } from "@/lib/email";
+import { sendContactEmail, sendRegistrationConfirmation, sendTeamStatusNotification } from "@/lib/email";
 import { GroupMatch, GroupName, Team, ALL_GROUPS } from "@/lib/types";
 
 type ActionPayload =
@@ -64,8 +64,13 @@ export async function POST(request: Request) {
         id: crypto.randomUUID(), status: "pending", createdAt: new Date().toISOString(),
       });
       await writeState(state);
-      const confirmResult = await sendRegistrationConfirmation(body.payload.captainEmail, body.payload.name);
-      if (!confirmResult.ok) console.error("Failed to send confirmation email:", confirmResult.error);
+      const confirmResult = await sendRegistrationConfirmation(
+        body.payload.captainEmail,
+        body.payload.name,
+        body.payload.captainName,
+        cleanPlayers,
+      );
+      if (!confirmResult.ok) console.warn("[email] Registration confirmation not sent:", confirmResult.error);
       return NextResponse.json({ ok: true, state, message: "Registration submitted for admin approval." });
     }
     case "contact-message": {
@@ -74,9 +79,8 @@ export async function POST(request: Request) {
         message: body.payload.message, createdAt: new Date().toISOString(),
       });
       await writeState(state);
-      const emailResult = await sendContactEmail(body.payload.name, body.payload.message);
-      if (!emailResult.ok) console.error("Failed to send contact email:", emailResult.error);
-      return NextResponse.json({ ok: true, state, emailSent: emailResult.ok });
+      // Contact form does not collect an email address — message is stored and visible in admin panel.
+      return NextResponse.json({ ok: true, state });
     }
     case "delete-contact-message": {
       state.contactMessages = state.contactMessages.filter((m) => m.id !== body.payload.messageId);
@@ -118,9 +122,22 @@ export async function POST(request: Request) {
       state.bracketMatches = state.bracketMatches.map((match) =>
         match.id === body.payload.matchId ? { ...match, homeScore: body.payload.homeScore, awayScore: body.payload.awayScore } : match);
       break;
-    case "set-team-status":
+    case "set-team-status": {
       state.teams = state.teams.map((team) => team.id === body.payload.teamId ? { ...team, status: body.payload.status } : team);
+      const updatedTeam = state.teams.find((t) => t.id === body.payload.teamId);
+      if (updatedTeam && (body.payload.status === "approved" || body.payload.status === "denied")) {
+        await writeState(state);
+        const statusResult = await sendTeamStatusNotification(
+          updatedTeam.captainEmail,
+          updatedTeam.name,
+          updatedTeam.captainName,
+          body.payload.status,
+        );
+        if (!statusResult.ok) console.warn("[email] Status notification not sent:", statusResult.error);
+        return NextResponse.json({ ok: true, state });
+      }
       break;
+    }
     case "edit-team": {
       const duplicate = state.teams.some((team) => team.id !== body.payload.teamId && team.name.trim().toLowerCase() === body.payload.name.trim().toLowerCase());
       if (duplicate) return NextResponse.json({ ok: false, message: "Team name already exists." }, { status: 400 });

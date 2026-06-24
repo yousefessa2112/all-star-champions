@@ -5,15 +5,42 @@ import { Footer } from "@/components/footer";
 import { Providers } from "@/components/providers";
 import { CookieConsent } from "@/components/cookie-consent";
 import { AnalyticsLoader } from "@/components/analytics";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
-  title: "All Star Champions | Brooklyn's Premier Soccer Tournament",
-  description: "One Game. One Dream. One Champion. Brooklyn's premier community soccer tournament at SoFive. Register your team today.",
+  title: {
+    default: "All Star Champions | Brooklyn's Premier Soccer Tournament",
+    template: "%s | All Star Champions",
+  },
+  description:
+    "One Game. One Dream. One Champion. Brooklyn's premier community soccer tournament at SoFive. Register your team today.",
   keywords: "soccer, tournament, Brooklyn, football, All Star Champions, SoFive",
+  metadataBase: new URL("https://allstarchampions.vercel.app"),
   openGraph: {
-    title: "All Star Champions",
-    description: "Brooklyn's Premier Soccer Tournament",
+    title: "All Star Champions | Brooklyn's Premier Soccer Tournament",
+    description:
+      "One Game. One Dream. One Champion. Brooklyn's premier community soccer tournament at SoFive.",
     type: "website",
+    url: "https://allstarchampions.vercel.app",
+    images: [
+      {
+        url: "/hero-player.png",
+        width: 1200,
+        height: 630,
+        alt: "All Star Champions — Brooklyn Soccer Tournament",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "All Star Champions | Brooklyn's Premier Soccer Tournament",
+    description:
+      "One Game. One Dream. One Champion. Brooklyn's premier community soccer tournament at SoFive.",
+    images: ["/hero-player.png"],
+  },
+  icons: {
+    icon: "/favicon.ico",
   },
 };
 
@@ -32,6 +59,8 @@ export default function RootLayout({
           <CookieConsent />
           <AnalyticsLoader />
         </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
