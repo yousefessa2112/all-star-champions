@@ -1,10 +1,10 @@
-import { Redis } from "@upstash/redis";
 import { DEFAULT_STATE } from "@/lib/default-data";
 import { TournamentState } from "@/lib/types";
+import { get, put } from "@vercel/blob";
 import path from "path";
 import fs from "fs";
 
-const KV_KEY = "tournament-state-v2";
+const BLOB_KEY = "all-star-champions/tournament-state-v2.json";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -24,39 +24,41 @@ const normalizeState = (raw: TournamentState): TournamentState => {
 };
 
 // ---------------------------------------------------------------------------
-// Redis client (Upstash REST API)
+// Vercel Blob client
 //
-// Supports two REDIS_URL formats:
-//   1. https://<host>  — Upstash REST URL; also needs REDIS_TOKEN
-//   2. rediss://default:<token>@<host>:<port>  — standard Redis URL (convert)
-//   3. redis://default:<token>@<host>:<port>   — same, non-TLS variant
+// Uses BLOB_READ_WRITE_TOKEN which is auto-provisioned on Vercel deployments.
+// Falls back to the local filesystem when the token is missing (local dev).
 // ---------------------------------------------------------------------------
 
-function buildRedisClient(): Redis | null {
-  const rawUrl = process.env.REDIS_URL?.trim();
-  if (!rawUrl) return null;
+function hasBlobToken(): boolean {
+  return typeof process.env.BLOB_READ_WRITE_TOKEN === "string" &&
+    process.env.BLOB_READ_WRITE_TOKEN.trim().length > 0;
+}
 
-  if (rawUrl.startsWith("https://")) {
-    // Already an Upstash REST URL
-    const token = process.env.REDIS_TOKEN ?? "";
-    return new Redis({ url: rawUrl, token });
-  }
-
-  // Parse standard redis:// or rediss:// URL and convert to Upstash REST
+async function blobRead(): Promise<TournamentState | null> {
   try {
-    const parsed = new URL(rawUrl);
-    const restUrl = `https://${parsed.hostname}`;
-    // Upstash token is the password field in the standard URL
-    const token = parsed.password || parsed.username;
-    return new Redis({ url: restUrl, token });
-  } catch {
-    console.error("server-store: failed to parse REDIS_URL:", rawUrl);
-    return null;
+    const result = await get(BLOB_KEY, { access: "public" });
+    if (!result || result.statusCode === 304 || result.stream === null) {
+      return null;
+    }
+    const text = await new Response(result.stream).text();
+    return text ? (JSON.parse(text) as TournamentState) : null;
+  } catch (error) {
+    console.error("[server-store] Blob read error:", error);
+    throw error;
   }
 }
 
+async function blobWrite(state: TournamentState): Promise<void> {
+  await put(BLOB_KEY, JSON.stringify(state, null, 2), {
+    access: "public",
+    contentType: "application/json",
+    addRandomSuffix: false,
+  });
+}
+
 // ---------------------------------------------------------------------------
-// Filesystem fallback (local dev only — when REDIS_URL is not set)
+// Filesystem fallback (local dev only — when BLOB_READ_WRITE_TOKEN is not set)
 // ---------------------------------------------------------------------------
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -84,18 +86,16 @@ function fsWrite(state: TournamentState): void {
 // ---------------------------------------------------------------------------
 
 export async function readState(): Promise<TournamentState> {
-  const redis = buildRedisClient();
-
-  if (redis) {
+  if (hasBlobToken()) {
     try {
-      const data = await redis.get<TournamentState>(KV_KEY);
+      const data = await blobRead();
       if (!data) {
-        await redis.set(KV_KEY, DEFAULT_STATE);
+        await blobWrite(DEFAULT_STATE);
         return DEFAULT_STATE;
       }
       return normalizeState(data);
     } catch (error) {
-      console.error("Redis read error, returning default state:", error);
+      console.error("Blob read error, returning default state:", error);
       return DEFAULT_STATE;
     }
   }
@@ -110,13 +110,11 @@ export async function readState(): Promise<TournamentState> {
 }
 
 export async function writeState(next: TournamentState): Promise<void> {
-  const redis = buildRedisClient();
-
-  if (redis) {
+  if (hasBlobToken()) {
     try {
-      await redis.set(KV_KEY, next);
+      await blobWrite(next);
     } catch (error) {
-      console.error("Redis write error:", error);
+      console.error("Blob write error:", error);
       throw error;
     }
     return;
