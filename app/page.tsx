@@ -19,6 +19,11 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
+  const tournamentStarted = useMemo(() => {
+    const target = new Date(state.settings.nextTournamentDate).getTime();
+    return Number.isNaN(target) || target <= now;
+  }, [now, state.settings.nextTournamentDate]);
+
   const countdown = useMemo(() => {
     const target = new Date(state.settings.nextTournamentDate).getTime();
     const diff = Math.max(0, target - now);
@@ -134,8 +139,15 @@ export default function HomePage() {
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="font-condensed text-xs font-bold tracking-[0.3em] text-[#0A1628]/50 uppercase">
-                  TOURNAMENT STARTS IN
+                  {tournamentStarted ? "TOURNAMENT DATE" : "TOURNAMENT STARTS IN"}
                 </p>
+                {tournamentStarted ? (
+                  <p className="mt-4 font-heading text-3xl font-bold text-[#0A1628] sm:text-4xl lg:text-5xl">
+                    {new Date(state.settings.nextTournamentDate).toLocaleDateString("en-US", {
+                      month: "long", day: "numeric", year: "numeric",
+                    })}
+                  </p>
+                ) : (
                 <div className="mt-4 flex items-center gap-1 sm:gap-3">
                   {[
                     { label: "DAYS", value: formatUnit(countdown.days) },
@@ -156,6 +168,7 @@ export default function HomePage() {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
 
               <div className="flex flex-col items-start gap-3 lg:items-end">

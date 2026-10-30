@@ -38,6 +38,10 @@ export default function AdminPage() {
       toast.error("Pick a valid date and time first.");
       return;
     }
+    if (parsed.getTime() <= Date.now()) {
+      toast.error("That date is in the past. The countdown needs a future date.");
+      return;
+    }
     await setNextTournamentDate(parsed.toISOString());
     toast.success("Tournament date updated.");
   };
