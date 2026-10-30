@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readState, writeState } from "@/lib/server-store";
 import { buildGroupMatches, computeStandings, drawGroupsRandomly, emptyGroups, seedBracketFromStandings } from "@/lib/tournament-utils";
-import { sendContactEmail, sendRegistrationConfirmation, sendTeamStatusNotification } from "@/lib/email";
+import { sendAdminContactAlert, sendAdminRegistrationAlert, sendRegistrationConfirmation, sendTeamStatusNotification } from "@/lib/email";
 import { GroupMatch, GroupName, Team, ALL_GROUPS } from "@/lib/types";
 
 type ActionPayload =
@@ -71,6 +71,14 @@ export async function POST(request: Request) {
         cleanPlayers,
       );
       if (!confirmResult.ok) console.warn("[email] Registration confirmation not sent:", confirmResult.error);
+      const adminAlert = await sendAdminRegistrationAlert(
+        body.payload.name,
+        body.payload.captainName,
+        body.payload.captainEmail,
+        body.payload.captainPhone,
+        cleanPlayers,
+      );
+      if (!adminAlert.ok) console.warn("[email] Admin registration alert not sent:", adminAlert.error);
       return NextResponse.json({ ok: true, state, message: "Registration submitted for admin approval." });
     }
     case "contact-message": {
@@ -79,7 +87,8 @@ export async function POST(request: Request) {
         message: body.payload.message, createdAt: new Date().toISOString(),
       });
       await writeState(state);
-      // Contact form does not collect an email address — message is stored and visible in admin panel.
+      const contactAlert = await sendAdminContactAlert(body.payload.name, body.payload.message);
+      if (!contactAlert.ok) console.warn("[email] Admin contact alert not sent:", contactAlert.error);
       return NextResponse.json({ ok: true, state });
     }
     case "delete-contact-message": {

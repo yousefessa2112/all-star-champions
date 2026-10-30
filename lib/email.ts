@@ -246,6 +246,94 @@ export async function sendContactConfirmation(
   }
 }
 
+// ─── 4. Admin Alerts ──────────────────────────────────────────────────────────
+
+function adminEmail(): string | null {
+  const value = process.env.ADMIN_EMAIL;
+  if (!value || !value.trim()) {
+    console.warn("[email] ADMIN_EMAIL not set — admin alerts disabled.");
+    return null;
+  }
+  return value.trim();
+}
+
+export async function sendAdminRegistrationAlert(
+  teamName: string,
+  captainName: string,
+  captainEmail: string,
+  captainPhone: string,
+  players: string[],
+): Promise<{ ok: boolean; error?: string }> {
+  const resend = getResend();
+  const to = adminEmail();
+  if (!resend || !to) return { ok: false, error: "Admin alerts not configured" };
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;font-weight:900;color:#0A1628;text-transform:uppercase;">New Team Registration</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:#444;">A team just registered and is waiting for your approval.</p>
+    ${goldDivider()}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      <tr><td style="padding:8px 0;font-size:13px;font-weight:700;color:#0A1628;text-transform:uppercase;width:140px;">Team</td><td style="padding:8px 0;font-size:14px;color:#333;">${teamName}</td></tr>
+      <tr><td style="padding:8px 0;font-size:13px;font-weight:700;color:#0A1628;text-transform:uppercase;">Captain</td><td style="padding:8px 0;font-size:14px;color:#333;">${captainName}</td></tr>
+      <tr><td style="padding:8px 0;font-size:13px;font-weight:700;color:#0A1628;text-transform:uppercase;">Email</td><td style="padding:8px 0;font-size:14px;color:#333;">${captainEmail}</td></tr>
+      <tr><td style="padding:8px 0;font-size:13px;font-weight:700;color:#0A1628;text-transform:uppercase;">Phone</td><td style="padding:8px 0;font-size:14px;color:#333;">${captainPhone}</td></tr>
+      <tr><td style="padding:8px 0;font-size:13px;font-weight:700;color:#0A1628;text-transform:uppercase;vertical-align:top;">Players (${players.length})</td><td style="padding:8px 0;">${playerList(players)}</td></tr>
+    </table>
+    ${goldDivider()}
+    <p style="font-size:13px;color:#666;">Approve or deny this team in the admin panel.</p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to,
+      replyTo: captainEmail,
+      subject: `New registration: ${teamName} | All Star Champions`,
+      html: emailWrapper(body),
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err) {
+    console.error("[email] Failed to send admin registration alert:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+export async function sendAdminContactAlert(
+  senderName: string,
+  message: string,
+  senderEmail?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const resend = getResend();
+  const to = adminEmail();
+  if (!resend || !to) return { ok: false, error: "Admin alerts not configured" };
+
+  const safe = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;font-weight:900;color:#0A1628;text-transform:uppercase;">New Contact Message</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:#444;">From <strong>${senderName}</strong>${senderEmail ? ` (${senderEmail})` : ""}</p>
+    ${goldDivider()}
+    <div style="background:#f9f9f9;border:1px solid #e0e0e0;padding:14px 16px;font-size:14px;color:#333;line-height:1.6;white-space:pre-wrap;">${safe}</div>
+    ${goldDivider()}
+    <p style="font-size:13px;color:#666;">This message is also saved in the admin panel.</p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to,
+      ...(senderEmail ? { replyTo: senderEmail } : {}),
+      subject: `New message from ${senderName} | All Star Champions`,
+      html: emailWrapper(body),
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err) {
+    console.error("[email] Failed to send admin contact alert:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
 // ─── Legacy export kept for backward compatibility ────────────────────────────
 
 /** @deprecated Use sendContactConfirmation instead */

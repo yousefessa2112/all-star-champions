@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { PageShell } from "@/components/page-shell";
 import { useTournament } from "@/components/tournament-provider";
@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authorized, setAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState<"teams" | "groups" | "scores" | "bracket" | "messages">("teams");
+  const [dateDraft, setDateDraft] = useState("");
   const {
     state, drawGroups, assignTeamToGroup, updateGroupMatchScore, updateBracketMatchScore,
     setTeamStatus, editTeam, deleteTeam, deleteContactMessage,
@@ -19,6 +20,27 @@ export default function AdminPage() {
   } = useTournament();
 
   const teamById = useMemo(() => new Map(state.teams.map((team) => [team.id, team])), [state.teams]);
+
+  useEffect(() => {
+    const current = state.settings.nextTournamentDate;
+    if (!current) return;
+    const parsed = new Date(current);
+    if (Number.isNaN(parsed.getTime())) return;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setDateDraft(
+      `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`,
+    );
+  }, [state.settings.nextTournamentDate]);
+
+  const applyTournamentDate = async () => {
+    const parsed = new Date(dateDraft);
+    if (!dateDraft || Number.isNaN(parsed.getTime())) {
+      toast.error("Pick a valid date and time first.");
+      return;
+    }
+    await setNextTournamentDate(parsed.toISOString());
+    toast.success("Tournament date updated.");
+  };
 
   const login = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -69,11 +91,19 @@ export default function AdminPage() {
       <section className="border-2 border-[#0A1628] bg-white p-5 mb-6">
         <h2 className="font-heading text-sm font-bold tracking-wider text-[#0A1628] uppercase mb-4">SETTINGS</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="border border-[#D4D0CB] p-3">
+          <div className="border border-[#D4D0CB] p-3">
             <span className="font-condensed text-xs font-semibold tracking-wider text-[#0A1628]/50 uppercase block mb-1">Tournament Date</span>
-            <input type="datetime-local" className="w-full border border-[#D4D0CB] bg-white px-2 py-1.5 text-sm outline-none focus:border-[#FFD700]"
-              onChange={(event) => setNextTournamentDate(new Date(event.target.value).toISOString())} />
-          </label>
+            <input type="datetime-local" value={dateDraft}
+              onChange={(event) => setDateDraft(event.target.value)}
+              className="w-full border border-[#D4D0CB] bg-white px-2 py-1.5 text-sm outline-none focus:border-[#FFD700]" />
+            <button type="button" onClick={applyTournamentDate} disabled={!dateDraft}
+              className="mt-2 w-full bg-[#0A1628] px-2 py-1.5 font-condensed text-xs font-bold tracking-wider text-[#FFD700] uppercase transition-opacity hover:opacity-90 disabled:opacity-40">
+              Apply Date
+            </button>
+            <p className="mt-1 font-condensed text-[11px] text-[#0A1628]/50">
+              Live: {state.settings.nextTournamentDate ? new Date(state.settings.nextTournamentDate).toLocaleString() : "not set"}
+            </p>
+          </div>
           <button type="button" className={`border p-3 font-condensed text-sm font-semibold tracking-wide transition-colors ${state.settings.registrationOpen ? "border-green-500 bg-green-50 text-green-700" : "border-[#D4D0CB] text-[#0A1628]/60"}`}
             onClick={() => setRegistrationOpen(!state.settings.registrationOpen)}>
             Registration: {state.settings.registrationOpen ? "OPEN" : "CLOSED"}
