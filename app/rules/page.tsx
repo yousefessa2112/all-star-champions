@@ -3,8 +3,9 @@
 import { PageShell } from "@/components/page-shell";
 import { AnimateIn, StaggerContainer, StaggerItem } from "@/components/animate-in";
 import { Shield, Users, Swords, MapPin } from "lucide-react";
+import { useTournament } from "@/components/tournament-provider";
 
-const sections = [
+const buildSections = (tournamentDate: string) => [
   {
     icon: Shield,
     title: "TOURNAMENT FORMAT",
@@ -40,7 +41,10 @@ const sections = [
     title: "FEES & LOCATION",
     points: [
       "Venue: SoFive — 2015 Pitkin Ave, Brooklyn, NY 11207",
-      "Date: May 30, 2026 at 10:00 PM EST",
+      `Date: ${new Date(tournamentDate).toLocaleString("en-US", {
+        month: "long", day: "numeric", year: "numeric",
+        hour: "numeric", minute: "2-digit", timeZoneName: "short",
+      })}`,
       "Contact the organizer for payment details.",
       "Phone: 929-304-3899 / Instagram: @all_star_champions",
     ],
@@ -48,6 +52,8 @@ const sections = [
 ];
 
 export default function RulesPage() {
+  const { state } = useTournament();
+  const sections = buildSections(state.settings.nextTournamentDate);
   return (
     <PageShell>
       <AnimateIn>

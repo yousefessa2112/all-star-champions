@@ -247,7 +247,10 @@ export default function HomePage() {
                   <div className="flex items-start gap-3">
                     <Calendar className="h-5 w-5 text-[#FFD700] mt-0.5 shrink-0" />
                     <p className="font-condensed text-sm text-white/60 tracking-wide">
-                      May 30, 2026 &middot; 10:00 PM EST
+                      {new Date(state.settings.nextTournamentDate).toLocaleString("en-US", {
+                        month: "long", day: "numeric", year: "numeric",
+                        hour: "numeric", minute: "2-digit", timeZoneName: "short",
+                      })}
                     </p>
                   </div>
                   <div className="flex items-start gap-3">
