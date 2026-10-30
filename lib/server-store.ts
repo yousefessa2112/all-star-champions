@@ -35,26 +35,41 @@ function hasBlobToken(): boolean {
     process.env.BLOB_READ_WRITE_TOKEN.trim().length > 0;
 }
 
+const BLOB_TIMEOUT_MS = 7000;
+
+function withTimeout<T>(work: Promise<T>, label: string): Promise<T> {
+  return Promise.race([
+    work,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${BLOB_TIMEOUT_MS}ms`)), BLOB_TIMEOUT_MS),
+    ),
+  ]);
+}
+
 async function blobRead(): Promise<TournamentState | null> {
   try {
-    const result = await get(BLOB_KEY, { access: "public" });
+    const result = await withTimeout(get(BLOB_KEY, { access: "public" }), "blob read");
     if (!result || result.statusCode === 304 || result.stream === null) {
       return null;
     }
     const text = await new Response(result.stream).text();
     return text ? (JSON.parse(text) as TournamentState) : null;
   } catch (error) {
-    console.error("[server-store] Blob read error:", error);
-    throw error;
+    // A missing blob is the normal first-run case, not a failure.
+    console.warn("[server-store] Blob read failed, treating as empty:", error);
+    return null;
   }
 }
 
 async function blobWrite(state: TournamentState): Promise<void> {
-  await put(BLOB_KEY, JSON.stringify(state, null, 2), {
-    access: "public",
-    contentType: "application/json",
-    addRandomSuffix: false,
-  });
+  await withTimeout(
+    put(BLOB_KEY, JSON.stringify(state, null, 2), {
+      access: "public",
+      contentType: "application/json",
+      addRandomSuffix: false,
+    }),
+    "blob write",
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -90,23 +105,33 @@ export async function readState(): Promise<TournamentState> {
     try {
       const data = await blobRead();
       if (!data) {
-        await blobWrite(DEFAULT_STATE);
+        // Seed the store, but never let seeding break a read.
+        try {
+          await blobWrite(DEFAULT_STATE);
+        } catch (seedError) {
+          console.error("[server-store] Could not seed blob:", seedError);
+        }
         return DEFAULT_STATE;
       }
       return normalizeState(data);
     } catch (error) {
-      console.error("Blob read error, returning default state:", error);
+      console.error("[server-store] readState failed, serving defaults:", error);
       return DEFAULT_STATE;
     }
   }
 
   // Filesystem fallback (local dev)
-  const data = fsRead();
-  if (!data) {
-    fsWrite(DEFAULT_STATE);
+  try {
+    const data = fsRead();
+    if (!data) {
+      fsWrite(DEFAULT_STATE);
+      return DEFAULT_STATE;
+    }
+    return normalizeState(data);
+  } catch (error) {
+    console.error("[server-store] Filesystem read failed, serving defaults:", error);
     return DEFAULT_STATE;
   }
-  return normalizeState(data);
 }
 
 export async function writeState(next: TournamentState): Promise<void> {
