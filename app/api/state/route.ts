@@ -17,7 +17,7 @@ type ActionPayload =
   | { type: "set-team-status"; payload: { teamId: string; status: "pending" | "approved" | "denied" } }
   | { type: "edit-team"; payload: { teamId: string; name: string; captainName: string; captainPhone: string; captainEmail: string; players: string[] } }
   | { type: "delete-team"; payload: { teamId: string } }
-  | { type: "contact-message"; payload: { name: string; message: string } }
+  | { type: "contact-message"; payload: { name: string; message: string; email?: string } }
   | { type: "delete-contact-message"; payload: { messageId: string } };
 
 const ensureUniqueAcrossGroups = (
@@ -83,11 +83,11 @@ export async function POST(request: Request) {
     }
     case "contact-message": {
       state.contactMessages.push({
-        id: crypto.randomUUID(), name: body.payload.name,
+        id: crypto.randomUUID(), name: body.payload.name, email: body.payload.email,
         message: body.payload.message, createdAt: new Date().toISOString(),
       });
       await writeState(state);
-      const contactAlert = await sendAdminContactAlert(body.payload.name, body.payload.message);
+      const contactAlert = await sendAdminContactAlert(body.payload.name, body.payload.message, body.payload.email);
       if (!contactAlert.ok) console.warn("[email] Admin contact alert not sent:", contactAlert.error);
       return NextResponse.json({ ok: true, state });
     }

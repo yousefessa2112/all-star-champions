@@ -239,6 +239,12 @@ export default function AdminPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-condensed text-sm font-semibold tracking-wide">{msg.name}</span>
+                        {msg.email && (
+                          <a href={`mailto:${msg.email}?subject=Re:%20All%20Star%20Champions`}
+                            className="font-condensed text-xs tracking-wide text-[#0A1628] underline decoration-[#FFD700] decoration-2 underline-offset-2 hover:text-[#FFD700]">
+                            {msg.email}
+                          </a>
+                        )}
                         <span className="font-condensed text-xs text-[#0A1628]/40 tracking-wide">
                           {new Date(msg.createdAt).toLocaleDateString()} {new Date(msg.createdAt).toLocaleTimeString()}
                         </span>

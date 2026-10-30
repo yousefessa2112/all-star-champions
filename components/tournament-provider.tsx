@@ -10,7 +10,7 @@ type TournamentContextValue = {
   state: TournamentState;
   spotsRemaining: number;
   registerTeam: (payload: NewTeamInput) => Promise<{ ok: boolean; message?: string }>;
-  submitContactMessage: (name: string, message: string) => Promise<void>;
+  submitContactMessage: (name: string, message: string, email?: string) => Promise<void>;
   deleteContactMessage: (messageId: string) => Promise<void>;
   setRegistrationOpen: (open: boolean) => Promise<void>;
   setGroupsVisible: (visible: boolean) => Promise<void>;
@@ -78,8 +78,8 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     return { ok: result.ok, message: result.message };
   };
 
-  const submitContactMessage: TournamentContextValue["submitContactMessage"] = async (name, message) => {
-    await act({ type: "contact-message", payload: { name, message } });
+  const submitContactMessage: TournamentContextValue["submitContactMessage"] = async (name, message, email) => {
+    await act({ type: "contact-message", payload: { name, message, email } });
   };
 
   const deleteContactMessage: TournamentContextValue["deleteContactMessage"] = async (messageId) => {

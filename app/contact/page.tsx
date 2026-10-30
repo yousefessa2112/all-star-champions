@@ -10,17 +10,19 @@ import { Phone, MapPin, Send } from "lucide-react";
 export default function ContactPage() {
   const { submitContactMessage } = useTournament();
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!name.trim() || !message.trim()) { toast.error("Please complete all fields."); return; }
+    if (!name.trim() || !email.trim() || !message.trim()) { toast.error("Please complete all fields."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { toast.error("Enter a valid email address."); return; }
     setSubmitting(true);
-    await submitContactMessage(name.trim(), message.trim());
+    await submitContactMessage(name.trim(), message.trim(), email.trim());
     setSubmitting(false);
-    toast.success("Message sent successfully.");
-    setName(""); setMessage("");
+    toast.success("Message sent. We'll reply to your email.");
+    setName(""); setEmail(""); setMessage("");
   };
 
   return (
@@ -93,6 +95,13 @@ export default function ContactPage() {
                 </label>
                 <input value={name} onChange={(event) => setName(event.target.value)}
                   placeholder="Enter your name" className="input-field" />
+              </div>
+              <div>
+                <label className="font-condensed text-xs font-semibold tracking-wider text-[#0A1628]/60 uppercase block mb-1">
+                  Your Email
+                </label>
+                <input type="email" value={email} onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com" className="input-field" />
               </div>
               <div>
                 <label className="font-condensed text-xs font-semibold tracking-wider text-[#0A1628]/60 uppercase block mb-1">
