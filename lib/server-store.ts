@@ -1,6 +1,6 @@
 import { DEFAULT_STATE } from "@/lib/default-data";
 import { TournamentState } from "@/lib/types";
-import { get, put } from "@vercel/blob";
+import { head, put } from "@vercel/blob";
 import path from "path";
 import fs from "fs";
 
@@ -53,13 +53,22 @@ function withTimeout<T>(work: Promise<T>, label: string): Promise<T> {
   ]);
 }
 
+// Read by resolving the blob's public URL with head() (token authenticated),
+// then fetching that URL directly. Reading the pathname through get() returns
+// 403 on a public store.
 async function blobRead(): Promise<TournamentState | null> {
   try {
-    const result = await withTimeout(get(BLOB_KEY, { access: "public" }), "blob read");
-    if (!result || result.statusCode === 304 || result.stream === null) {
+    const meta = await withTimeout(head(BLOB_KEY), "blob head");
+    if (!meta?.url) return null;
+    const response = await withTimeout(
+      fetch(`${meta.url}?t=${Date.now()}`, { cache: "no-store" }),
+      "blob fetch",
+    );
+    if (!response.ok) {
+      console.warn("[server-store] Blob fetch returned", response.status);
       return null;
     }
-    const text = await new Response(result.stream).text();
+    const text = await response.text();
     return text ? (JSON.parse(text) as TournamentState) : null;
   } catch (error) {
     // A missing blob is the normal first-run case, not a failure.
@@ -74,6 +83,7 @@ async function blobWrite(state: TournamentState): Promise<void> {
       access: "public",
       contentType: "application/json",
       addRandomSuffix: false,
+      allowOverwrite: true,
     }),
     "blob write",
   );

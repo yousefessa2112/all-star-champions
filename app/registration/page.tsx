@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { PageShell } from "@/components/page-shell";
 import { useTournament } from "@/components/tournament-provider";
 import { AnimateIn, StaggerContainer, StaggerItem } from "@/components/animate-in";
-import { UserPlus, X, Plus } from "lucide-react";
+import { UserPlus, X, Plus, CheckCircle2 } from "lucide-react";
 
 export default function RegistrationPage() {
   const { state, spotsRemaining, registerTeam } = useTournament();
@@ -15,6 +15,7 @@ export default function RegistrationPage() {
   const [captainEmail, setCaptainEmail] = useState("");
   const [players, setPlayers] = useState<string[]>(["", "", "", "", ""]);
   const [submitting, setSubmitting] = useState(false);
+  const [submittedTeam, setSubmittedTeam] = useState<string | null>(null);
 
   const cleanPlayers = useMemo(() => players.map((p) => p.trim()).filter(Boolean), [players]);
   const registrationClosed = !state.settings.registrationOpen || spotsRemaining === 0;
@@ -45,10 +46,41 @@ export default function RegistrationPage() {
     const result = await registerTeam({ name: teamName, captainName, captainPhone, captainEmail, players: cleanPlayers });
     setSubmitting(false);
     if (!result.ok) { toast.error(result.message ?? "Registration failed."); return; }
-    toast.success("Registration submitted for admin approval.");
+    setSubmittedTeam(teamName);
     setTeamName(""); setCaptainName(""); setCaptainPhone(""); setCaptainEmail("");
     setPlayers(["", "", "", "", ""]);
   };
+
+  if (submittedTeam) {
+    return (
+      <PageShell>
+        <AnimateIn>
+          <section className="mx-auto max-w-xl border-2 border-[#0A1628] bg-white p-10 text-center">
+            <CheckCircle2 className="mx-auto h-14 w-14 text-[#FFD700]" strokeWidth={1.5} />
+            <p className="mt-6 font-condensed text-xs font-bold tracking-[0.3em] text-[#FFD700] uppercase">You&apos;re on the list</p>
+            <h1 className="section-title mt-3">THANK YOU</h1>
+            <div className="mx-auto mt-3 h-1 w-24 bg-[#FFD700]" style={{ transform: "skewX(-12deg)" }} />
+            <p className="mt-6 text-base text-[#0A1628]">
+              <strong>{submittedTeam}</strong> has been registered for the All Star Champions tournament.
+            </p>
+            <div className="mt-6 border-l-4 border-[#FFD700] bg-[#FFFBEA] p-4 text-left">
+              <p className="font-condensed text-sm font-semibold tracking-wide text-[#0A1628] uppercase">What happens next</p>
+              <p className="mt-2 text-sm text-[#0A1628]/80">
+                An admin reviews your squad and approves it. Once approved your team appears on the Teams page and you are entered into the group draw.
+              </p>
+            </div>
+            <p className="mt-6 text-sm text-[#0A1628]/60">
+              Questions? Call 929-304-3899 or DM @all_star_champions on Instagram.
+            </p>
+            <button type="button" onClick={() => setSubmittedTeam(null)}
+              className="mt-8 w-full bg-[#0A1628] px-6 py-3 font-condensed text-sm font-bold tracking-wider text-[#FFD700] uppercase transition-opacity hover:opacity-90">
+              Register another team
+            </button>
+          </section>
+        </AnimateIn>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>
