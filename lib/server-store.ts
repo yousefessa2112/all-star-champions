@@ -30,9 +30,16 @@ const normalizeState = (raw: TournamentState): TournamentState => {
 // Falls back to the local filesystem when the token is missing (local dev).
 // ---------------------------------------------------------------------------
 
+// The SDK accepts either a static read-write token, or an OIDC token paired
+// with a store id. Vercel now provisions the latter pair by default, so
+// checking only for BLOB_READ_WRITE_TOKEN sends live deployments down the
+// local-filesystem path, which does not exist on a serverless runtime.
 function hasBlobToken(): boolean {
-  return typeof process.env.BLOB_READ_WRITE_TOKEN === "string" &&
-    process.env.BLOB_READ_WRITE_TOKEN.trim().length > 0;
+  const readWrite = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  if (readWrite) return true;
+  const storeId = process.env.BLOB_STORE_ID?.trim();
+  const oidcToken = process.env.VERCEL_OIDC_TOKEN?.trim();
+  return Boolean(storeId && oidcToken);
 }
 
 const BLOB_TIMEOUT_MS = 7000;
