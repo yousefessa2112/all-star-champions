@@ -60,8 +60,10 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     return () => window.clearInterval(id);
   }, []);
 
+  // Only approved teams take a spot. Pending submissions are not counted
+  // publicly and do not consume capacity until an admin approves them.
   const spotsRemaining = useMemo(
-    () => Math.max(0, state.settings.maxTeams - state.teams.filter((t) => t.status !== "denied").length),
+    () => Math.max(0, state.settings.maxTeams - state.teams.filter((t) => t.status === "approved").length),
     [state.settings.maxTeams, state.teams],
   );
 

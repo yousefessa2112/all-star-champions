@@ -48,8 +48,8 @@ export async function POST(request: Request) {
     case "register-team": {
       if (!state.settings.registrationOpen)
         return NextResponse.json({ ok: false, message: "Registration is currently closed." }, { status: 400 });
-      const activeTeams = state.teams.filter((t) => t.status !== "denied");
-      if (activeTeams.length >= state.settings.maxTeams)
+      const approvedTeams = state.teams.filter((t) => t.status === "approved");
+      if (approvedTeams.length >= state.settings.maxTeams)
         return NextResponse.json({ ok: false, message: "All spots are filled." }, { status: 400 });
       const duplicate = state.teams.some(
         (team) => team.name.trim().toLowerCase() === body.payload.name.trim().toLowerCase(),

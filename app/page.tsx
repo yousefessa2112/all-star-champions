@@ -29,7 +29,7 @@ export default function HomePage() {
     return { days, hours, minutes, seconds };
   }, [now, state.settings.nextTournamentDate]);
 
-  const teamsRegistered = state.teams.filter((t) => t.status !== "denied").length;
+  const teamsRegistered = state.teams.filter((t) => t.status === "approved").length;
 
   return (
     <div className="noise-bg">
